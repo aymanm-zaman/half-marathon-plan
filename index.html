@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HM Plan" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>Half Marathon — Sub 2:00</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #0a0a0a; -webkit-text-size-adjust: 100%; }
+    body { overscroll-behavior-y: none; }
+    * { -webkit-tap-highlight-color: transparent; }
+    .app-shell {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+    button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+const { useState } = React;
+
+const coaching = {
+  easy: {
+    label: "EASY RUN",
+    color: "#4ade80",
+    bg: "#0d1f0d",
+    what: "A fully conversational run. You should be able to speak in complete sentences without gasping. If you're breathing too hard to talk, slow down — no exceptions.",
+    feel: "Effort: 3–4/10. It should feel almost embarrassingly slow, especially early in the plan. That's correct. Your body is building mitochondria and capillaries at this intensity, not at a harder pace.",
+    pace: "Target: 6:45–7:15/km. In the early weeks this might even be 7:30/km. That is fine.",
+    prep: "No formal warmup needed for runs under 8 km. Start at a walk for 2–3 minutes, then ease into your easy pace. Do not start at full pace from your front door.",
+    during: "Run tall. Relax your shoulders — they should be down, not hunched. Hands loose, not clenched. Breathe through your nose and mouth. If you can only breathe through your mouth, you're going too fast.",
+    after: "5 minutes of walking, then 5–8 minutes of easy static stretching: hip flexors, calves, hamstrings, quads. Not aggressive — just letting the muscles relax.",
+    tip: "The biggest beginner mistake is running easy days too hard. Most people run about 20% too fast on easy days. Use the talk test every few minutes as a check.",
+  },
+  strides: {
+    label: "EASY RUN + STRIDES",
+    color: "#4ade80",
+    bg: "#0d1f0d",
+    what: "Same as an easy run, but at the very end you add short accelerations called strides. These are not sprints. They are smooth, controlled pickups to about 85% effort over 20 seconds, then you walk back to the start position.",
+    feel: "The run portion: 3–4/10. The strides themselves: 7–8/10 — fast but controlled. You should feel light and smooth, not like you're straining.",
+    pace: "Easy portion: 6:45–7:15/km. Strides: approximately 4:00–4:30/km — but go by feel, not your watch.",
+    prep: "Same as easy run. Make sure you have finished at least 10 minutes of easy running before the strides. Never do strides cold.",
+    during: "For each stride: start from a walk, gradually accelerate over the first 8 seconds, hold your fast pace for the middle 8–10 seconds, then gradually decelerate. Walk 60–90 seconds before the next one. Focus on quick light turnover and good posture — do not let your hips drop.",
+    after: "Walk 2–3 minutes after the final stride. Then the usual cooldown stretching. Your legs might feel slightly activated — that's normal and the point.",
+    tip: "Strides are the only fast running in the first 6 weeks of this plan. They train your neuromuscular system to run efficiently without the injury risk of intervals. Do not skip them.",
+  },
+  tempo: {
+    label: "TEMPO SESSION",
+    color: "#facc15",
+    bg: "#1f1a00",
+    what: "A controlled hard effort — not a race, not a sprint. Tempo pace is comfortably hard. You can speak, but only in short phrases, not full sentences. This trains your lactate threshold — the point at which your body starts accumulating fatigue byproducts faster than it can clear them.",
+    feel: "Effort: 7–8/10 during the tempo portion. Breathing is elevated and rhythmic. You are aware it is hard but you are in control.",
+    pace: "Tempo pace for a sub-2:00 half: approximately 5:00–5:20/km. This is roughly your 10K race pace. Do not go harder — that defeats the purpose.",
+    prep: "Every quality session starts with a 2 km warmup at easy pace (6:45–7:15/km). Non-negotiable. Running hard when cold injures tendons and produces worse physiological adaptation. After the warmup, do 4 x 20s strides before starting the tempo block.",
+    during: "Start each tempo block at the controlled end of the effort. Do not go out too hot — the first 2 minutes should feel almost easy. Settle in. Focus on smooth breathing: try a 3-step inhale, 2-step exhale rhythm. If you are gasping, slow down 5–10 sec/km.",
+    after: "2 km cooldown jog at easy pace immediately after the tempo block. Then walk 3–4 minutes. Stretch calves, hip flexors, and hamstrings. Do not sit down immediately — keep moving for 5 minutes.",
+    tip: "The warmup and cooldown are part of the workout, not optional bookends. The cooldown jog is when your body begins the recovery process. Skipping it noticeably increases next-day soreness.",
+  },
+  intervals: {
+    label: "INTERVAL SESSION",
+    color: "#facc15",
+    bg: "#1f1a00",
+    what: "Repeated efforts at a specific pace with recovery jogs in between. Early in the plan these are at 10K pace. Later they shift to your goal half marathon pace (5:41/km). The recovery jog is not optional rest — it's active recovery that clears lactate so you can hit the next rep properly.",
+    feel: "Each rep: 8/10 effort. Recovery jog: 3/10 — very easy, almost a shuffle. By the last rep you should feel like you could do one more but wouldn't want to.",
+    pace: "10K pace reps: approximately 4:45–5:00/km. HM pace reps: 5:41/km. Use your watch on these — precision matters here unlike easy runs.",
+    prep: "2 km easy warmup. Then 4 x 20s strides. Then begin the first rep. Give yourself 2–3 minutes between the strides and the first interval to let your heart rate settle slightly.",
+    during: "Hit your target pace within the first 200m of each rep, then hold it. Do not go faster — banking time does not work in interval training, it just means you blow up on later reps. During recovery jogs, keep moving — do not stop or walk unless something hurts.",
+    after: "2 km easy cooldown. Walk 3–4 minutes. Stretch. These sessions stress your muscles more than easy runs — give yourself a genuinely easy day the day after.",
+    tip: "If you cannot complete the last rep at target pace, cut the session short. Two quality reps done properly beat three reps done sloppily.",
+  },
+  long: {
+    label: "LONG RUN",
+    color: "#f97316",
+    bg: "#1f0d00",
+    what: "The most important session of the week. Builds endurance, trains fat oxidation, and develops the mental toughness to cover long distances. In the early weeks it is 100% conversational. From week 10 it has goal-pace segments embedded at the end.",
+    feel: "Base portion: 3–4/10 — identical to your easy run. Goal-pace segments (when they appear from week 10): 6–7/10 — controlled, not a race effort.",
+    pace: "Easy portions: 6:45–7:15/km. When goal-pace segments appear, the target is 5:41/km. The structure is always easy first, goal-pace at the end — never the reverse.",
+    prep: "Eat a light meal or snack 60–90 minutes before. For runs over 12 km, carry water or know your route's water fountain locations. Start 30 seconds per km slower than your easy pace for the first 2 km — your body needs time to warm up even within the run itself.",
+    during: "For runs over 12 km: take a sip of water every 20–25 minutes even if you do not feel thirsty. From week 9, consider a gel or energy chew at the 60-minute mark. Check in with your effort every 15 minutes. If the early km feel hard, back off — you will pay for it in the second half. The goal is to finish feeling like you could have run another 2 km, not to collapse at the end.",
+    after: "Do not sit down immediately. Walk 5–7 minutes. Eat something with both carbs and protein within 30 minutes — this is your recovery window. Stretch for 10 minutes. The rest of the day should be low-activity. Expect to feel the long run in your legs on Monday.",
+    tip: "Slow down on the long run. Most beginners run long runs 30–45 sec/km too fast and wonder why they feel wrecked for days afterward. If you are sore or exhausted 48 hours later, you ran it too hard.",
+  },
+  cycling: {
+    label: "CYCLING + STRENGTH",
+    color: "#60a5fa",
+    bg: "#000d1f",
+    what: "Cycling adds aerobic volume without the impact stress of running. Your joints, tendons, and shins need time to adapt to running — cycling lets you keep building your aerobic engine while they recover. This is not a hard session.",
+    feel: "Cycling: 4–5/10. Conversational pace on the bike. Spin at a cadence where your legs feel light, not grinding. This is active recovery with aerobic benefit, not a workout in itself.",
+    pace: "If on a stationary bike: moderate resistance, 80–90 rpm cadence. If outdoor: flat to rolling terrain, comfortable gear. You should be able to talk throughout.",
+    prep: "5 minutes easy spinning before you increase any resistance. If doing strength after cycling, change and take 5 minutes to shake your legs out before lifting.",
+    during: "Strength sessions: always do a movement-specific warmup before lifting. 2 sets of bodyweight squats, leg swings, hip circles, and calf raises before touching weights. Rest 90–120 seconds between working sets.",
+    after: "5–10 minutes of mobility work after strength: pigeon pose, figure-four stretch, thoracic rotations. Your hips and lower back are the priority areas as a runner.",
+    tip: "Strength training cuts overuse injury rates by roughly 68% according to the meta-analysis in the research doc. It is not optional and it is not just about getting stronger — it is about keeping your tendons, bones, and connective tissue resilient enough to handle the running load.",
+  },
+  strengthA: {
+    label: "STRENGTH SESSION A",
+    color: "#60a5fa",
+    bg: "#000d1f",
+    what: "Compound lower body and posterior chain work. These are your big strength builders. The weight should be heavy enough that the last 2–3 reps of each set feel genuinely challenging.",
+    exercises: [
+      { name: "Goblet Squat (or Barbell Back Squat)", sets: "3 x 8–10 reps", cue: "Feet shoulder-width, toes slightly out. Sit back into your hips, keep your chest tall. Knees track over your toes — don't let them cave inward. Full depth if mobility allows. Start with a dumbbell held at your chest if new to squatting." },
+      { name: "Romanian Deadlift (RDL)", sets: "3 x 8–10 reps", cue: "Hold dumbbells or barbell in front of you. Hinge at the hips with a soft bend in the knees, bar stays close to your legs as you lower. You should feel a deep stretch in your hamstrings at the bottom. Do not round your lower back — if it rounds, you've gone too far." },
+      { name: "Bulgarian Split Squat", sets: "3 x 8 reps each leg", cue: "Back foot elevated on a bench or chair. Front foot far enough forward that your shin stays vertical at the bottom of the movement. Lower until your back knee is an inch from the floor. This will be hard — start with bodyweight only if needed, add dumbbells when ready." },
+      { name: "Copenhagen Plank", sets: "3 x 20–30 seconds each side", cue: "Side plank with your top foot resting on a bench, bottom leg hanging free. Hold the position with your body in a straight line. This targets the adductors — critical for knee stability in running. If too hard, rest your bottom knee on the ground instead." },
+      { name: "Single-Leg Calf Raise", sets: "3 x 15 reps each leg", cue: "Stand on one foot on the edge of a step. Lower your heel fully below the step, then raise all the way up onto your toes. Slow and controlled — 2 seconds up, 2 seconds down. Hold a dumbbell in the opposite hand once bodyweight feels easy." },
+    ],
+    tip: "Progress the weight every 2–3 weeks. If 3 x 10 feels easy, add 2.5–5 kg. You are trying to build a meaningful strength stimulus, not just go through motions. Tendons adapt slowly — give them consistent load and they will hold up through the long runs.",
+  },
+  strengthB: {
+    label: "STRENGTH SESSION B",
+    color: "#60a5fa",
+    bg: "#000d1f",
+    what: "Single-leg stability, hip and glute work, and plyometrics. This session targets the exact weak points that cause the most common running injuries: IT band syndrome, patellofemoral pain, and shin splints.",
+    exercises: [
+      { name: "Step-Up with Knee Drive", sets: "3 x 10 reps each leg", cue: "Step onto a box or sturdy bench, drive the opposite knee up to hip height at the top. Control the descent — do not just fall back down. Hold dumbbells at your sides when the bodyweight version feels easy." },
+      { name: "Clamshell", sets: "3 x 20 reps each side", cue: "Lie on your side, knees bent to 90 degrees, feet stacked. Rotate your top knee open like a clamshell, keeping your feet together. Slow and controlled — do not let your hips roll backward. Add a resistance band above your knees when this feels too easy." },
+      { name: "Banded Side Walk", sets: "3 x 15 steps each direction", cue: "Band around ankles or above knees. Get into a quarter-squat position. Step sideways, keeping constant tension on the band throughout each step. Do not let your knees cave inward. Walk 15 steps left, then 15 steps right." },
+      { name: "Single-Leg Romanian Deadlift", sets: "3 x 8 reps each leg", cue: "Balance on one leg, hinge forward at the hip while the free leg extends behind you. Keep your hips square to the ground — do not let them rotate open. Hold a dumbbell in the opposite hand to the standing leg for balance and load." },
+      { name: "Pogo Hops", sets: "3 x 20 reps", cue: "Small, rapid two-foot hops on the spot. Land and immediately spring back up — minimal ground contact time. Stiff ankles, not a deep knee bend. Think of your ankles like springs. This trains the Achilles tendon and calf to absorb impact efficiently — exactly what you need for running." },
+    ],
+    tip: "The clamshell and banded side walk look trivial. They are not. IT band syndrome is almost always a hip abductor weakness problem — Fredericson's research found IT band sufferers had hip abductor strength 18–20% below uninjured runners, and a 6-week strengthening program returned 92% of them to pain-free running.",
+  },
+  race: {
+    label: "RACE DAY",
+    color: "#e879f9",
+    bg: "#1a001f",
+    what: "Half Marathon — 21.1 km. Target: sub-2:00. You have done the work. This is the celebration.",
+    feel: "The first 7 km should feel easy — almost frustratingly so. Resist the adrenaline. Km 8–15 is where you settle into race pace and find your rhythm. Km 16–21 is where the training pays off.",
+    pace: "Target pace: 5:41/km. Start at 5:45–5:50/km for the first 3 km. Do not go faster than 5:35/km at any point before km 16. Negative splits — running the second half faster than the first — is the goal.",
+    prep: "Night before: lay out all your kit. Eat a normal dinner — nothing experimental. Morning: eat 2–3 hours before the start (oats, banana, toast — whatever you have practiced on long runs). Arrive with 45 minutes to spare. Do a 5-minute easy walk warmup, 4 x 20s strides, and 5 minutes of easy movement.",
+    during: "First 5 km: hold back. Let people pass you — you will pass them later. Drink at every water station even if you do not feel thirsty. Take a gel at km 7 and km 14 if you have practiced this in training. Check your pace every 5 km. If you feel good at km 16, you can push.",
+    after: "Walk for 10 minutes minimum after finishing. Get food and water in within 20 minutes. Do not sit down in the cold. Stretch lightly. Take 3–5 days completely off running. You have earned it.",
+    tip: "The most common half marathon mistake is going out too fast in the first 3 km because of adrenaline and crowd energy. Your goal pace will feel easy at km 2. That feeling is lying to you. Trust your training pace.",
+  },
+};
+
+const getCoaching = (type, desc) => {
+  if (type === "off") return null;
+  if (type === "race") return coaching.race;
+  if (type === "long") return coaching.long;
+  if (type === "cross") return coaching.cycling;
+  if (type === "easy") {
+    if (desc.toLowerCase().includes("stride")) return coaching.strides;
+    return coaching.easy;
+  }
+  if (type === "quality") {
+    if (desc.toLowerCase().includes("stride")) return coaching.strides;
+    if (desc.toLowerCase().includes("km at") || desc.toLowerCase().includes("x 1") || desc.toLowerCase().includes("x 2") || desc.toLowerCase().includes("x 3")) return coaching.intervals;
+    return coaching.tempo;
+  }
+  return coaching.easy;
+};
+
+const plan = [
+  { week:1, phase:1, totalKm:20, cutback:false,
+    mon:{type:"easy",desc:"5 km easy run"},
+    tue:{type:"easy",desc:"4 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"easy",desc:"5 km easy run + 4 x 20s strides at the end"},
+    fri:{type:"cross",desc:"Cycling 30 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 6 km conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:2, phase:1, totalKm:22, cutback:false,
+    mon:{type:"easy",desc:"5 km easy run"},
+    tue:{type:"easy",desc:"4 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"easy",desc:"6 km easy run + 5 x 20s strides at the end"},
+    fri:{type:"cross",desc:"Cycling 35 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 7 km conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:3, phase:1, totalKm:24, cutback:false,
+    mon:{type:"easy",desc:"6 km easy run"},
+    tue:{type:"easy",desc:"4 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"easy",desc:"6 km easy run + 6 x 20s strides at the end"},
+    fri:{type:"cross",desc:"Cycling 40 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 8 km conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:4, phase:1, totalKm:18, cutback:true,
+    mon:{type:"easy",desc:"4 km easy run — cutback week, keep it gentle"},
+    tue:{type:"easy",desc:"3 km easy run + Strength A (reduce all weights by 20%)"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"easy",desc:"5 km easy run + 4 x 20s strides"},
+    fri:{type:"cross",desc:"Cycling 30 min easy + Strength B (reduce intensity)"},
+    sat:{type:"long",desc:"Long run: 6 km — cutback, fully conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:5, phase:2, totalKm:27, cutback:false,
+    mon:{type:"easy",desc:"6 km easy run"},
+    tue:{type:"easy",desc:"6 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 2 x 5 min tempo (3 min easy jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 40 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 10 km fully conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:6, phase:2, totalKm:29, cutback:false,
+    mon:{type:"easy",desc:"6 km easy run"},
+    tue:{type:"easy",desc:"6 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 3 x 5 min tempo (2 min easy jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 45 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 11 km conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:7, phase:2, totalKm:31, cutback:false,
+    mon:{type:"easy",desc:"7 km easy run"},
+    tue:{type:"easy",desc:"6 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 3 x 8 min tempo (90s easy jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 45 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 12 km conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:8, phase:2, totalKm:23, cutback:true,
+    mon:{type:"easy",desc:"5 km easy run — cutback week"},
+    tue:{type:"easy",desc:"5 km easy run + Strength A (reduce weights)"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 2 x 8 min tempo (90s easy jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 30 min easy + Strength B (reduce intensity)"},
+    sat:{type:"long",desc:"Long run: 9 km — cutback, fully conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:9, phase:2, totalKm:34, cutback:false,
+    mon:{type:"easy",desc:"7 km easy run"},
+    tue:{type:"easy",desc:"7 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 4 x 20s strides + 3 x 1 km at 10K pace (90s jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 50 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 14 km conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:10, phase:2, totalKm:36, cutback:false,
+    mon:{type:"easy",desc:"7 km easy run"},
+    tue:{type:"easy",desc:"7 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 20 min continuous tempo + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 50 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 15 km — 12 km easy then 3 km at goal HM pace (5:41/km)"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:11, phase:2, totalKm:38, cutback:false,
+    mon:{type:"easy",desc:"8 km easy run"},
+    tue:{type:"easy",desc:"7 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 3 x 2 km at HM goal pace 5:41/km (90s jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 55 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 16 km — 11 km easy then 5 km at HM goal pace (5:41/km)"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:12, phase:2, totalKm:28, cutback:true,
+    mon:{type:"easy",desc:"6 km easy run — cutback week"},
+    tue:{type:"easy",desc:"5 km easy run + Strength A (reduce weights)"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 2 x 2 km at HM goal pace 5:41/km (90s jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 35 min easy + Strength B (reduce intensity)"},
+    sat:{type:"long",desc:"Long run: 12 km — cutback, conversational"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:13, phase:3, totalKm:41, cutback:false,
+    mon:{type:"easy",desc:"8 km easy run"},
+    tue:{type:"easy",desc:"8 km easy run + Strength A"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 25 min continuous tempo + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 55 min easy + Strength B"},
+    sat:{type:"long",desc:"Long run: 18 km — 12 km easy then 6 km at HM goal pace (5:41/km)"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:14, phase:3, totalKm:43, cutback:false,
+    mon:{type:"easy",desc:"8 km easy run"},
+    tue:{type:"easy",desc:"8 km easy run + Strength A — last heavy lifting session of the plan"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 3 x 2 km at HM pace 5:41/km (90s jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 55 min easy + Strength B — last heavy lifting session of the plan"},
+    sat:{type:"long",desc:"Long run: 19 km — 12 km easy then 7 km at HM goal pace (5:41/km)"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:15, phase:3, totalKm:34, cutback:false,
+    mon:{type:"easy",desc:"7 km easy run"},
+    tue:{type:"easy",desc:"6 km easy run + Strength A — light only, no heavy compound lifts"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 3 x 1 km at HM pace 5:41/km (90s jog between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 40 min easy + Strength B — light only"},
+    sat:{type:"long",desc:"Long run: 12 km conversational — final long run of the plan"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:16, phase:4, totalKm:22, cutback:false,
+    mon:{type:"easy",desc:"5 km easy run"},
+    tue:{type:"easy",desc:"5 km easy run — no strength this week"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"quality",desc:"2 km easy warmup + 2 x 6 min at HM pace 5:41/km (3 min rest between) + 2 km cooldown"},
+    fri:{type:"cross",desc:"Cycling 25 min very easy — no strength, just keep blood moving"},
+    sat:{type:"long",desc:"8 km easy run — legs-fresh, zero intensity, just staying loose"},
+    sun:{type:"off",desc:"Full rest"}},
+
+  { week:17, phase:4, totalKm:10, cutback:false,
+    mon:{type:"easy",desc:"3 km shakeout jog — very easy, just moving your legs"},
+    tue:{type:"easy",desc:"2 km easy + 4 x 20s strides + 1 km cooldown jog"},
+    wed:{type:"off",desc:"Full rest"},
+    thu:{type:"easy",desc:"2 km easy + 4 x 20s strides — wake up your race legs"},
+    fri:{type:"off",desc:"Full rest — lay out your kit, eat normally, sleep well"},
+    sat:{type:"race",desc:"RACE DAY — Half Marathon. Target: sub-2:00 (5:41/km). Go out conservative."},
+    sun:{type:"off",desc:"Full rest — recovery starts now. You have earned this."}},
+];
+
+const typeStyles = {
+  easy:    { border:"#4ade80", labelColor:"#4ade80", label:"EASY" },
+  quality: { border:"#facc15", labelColor:"#facc15", label:"QUALITY" },
+  long:    { border:"#f97316", labelColor:"#f97316", label:"LONG RUN" },
+  cross:   { border:"#60a5fa", labelColor:"#60a5fa", label:"CROSS + STRENGTH" },
+  off:     { border:"#222",    labelColor:"#333",    label:"REST" },
+  race:    { border:"#e879f9", labelColor:"#e879f9", label:"RACE DAY" },
+};
+
+const phaseColors = {1:"#4ade80", 2:"#facc15", 3:"#f97316", 4:"#a78bfa"};
+const phaseNames  = {1:"BASE", 2:"BUILD", 3:"PEAK", 4:"TAPER"};
+const phases = [
+  {id:1, name:"BASE",  weeks:"1–4",   desc:"100% easy. Build the engine."},
+  {id:2, name:"BUILD", weeks:"5–12",  desc:"Introduce pace work. Extend the long run."},
+  {id:3, name:"PEAK",  weeks:"13–15", desc:"Race-pace specificity. Peak volume."},
+  {id:4, name:"TAPER", weeks:"16–17", desc:"Cut volume. Keep intensity. Trust the work."},
+];
+
+const days      = ["mon","tue","wed","thu","fri","sat","sun"];
+const dayLabels = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+
+function CoachingPanel({ data }) {
+  if (!data) return null;
+  if (data.exercises) {
+    return (
+      <div style={{marginTop:12, padding:"14px", background:"#080808", border:`1px solid ${data.color}22`}}>
+        <div style={{fontSize:9, letterSpacing:3, color:data.color, marginBottom:10}}>COACHING NOTES — {data.label}</div>
+        <div style={{fontSize:13, color:"#999", lineHeight:1.7, marginBottom:14}}>{data.what}</div>
+        {data.exercises.map((ex,i) => (
+          <div key={i} style={{marginBottom:14, paddingLeft:12, borderLeft:`2px solid ${data.color}33`}}>
+            <div style={{fontSize:13, color:"#e5e5e5", fontWeight:700, marginBottom:3}}>{ex.name}</div>
+            <div style={{fontSize:11, color:data.color, marginBottom:5, letterSpacing:1}}>{ex.sets}</div>
+            <div style={{fontSize:12, color:"#888", lineHeight:1.65}}>{ex.cue}</div>
+          </div>
+        ))}
+        <div style={{marginTop:12, padding:"10px 12px", background:"#0f0f0f", borderLeft:`2px solid ${data.color}`}}>
+          <div style={{fontSize:9, letterSpacing:2, color:data.color, marginBottom:4}}>COACHING TIP</div>
+          <div style={{fontSize:12, color:"#aaa", lineHeight:1.65}}>{data.tip}</div>
+        </div>
+      </div>
+    );
+  }
+  const rows = [
+    ["WHAT IT IS",        data.what],
+    ["HOW IT FEELS",      data.feel],
+    ["TARGET PACE",       data.pace],
+    ["BEFORE YOU START",  data.prep],
+    ["DURING",            data.during],
+    ["AFTER",             data.after],
+    ["KEY REMINDER",      data.tip],
+  ];
+  return (
+    <div style={{marginTop:12, padding:"14px", background:"#080808", border:`1px solid ${data.color}22`}}>
+      <div style={{fontSize:9, letterSpacing:3, color:data.color, marginBottom:14}}>COACHING NOTES — {data.label}</div>
+      <div style={{display:"flex", flexDirection:"column", gap:12}}>
+        {rows.map(([k,v]) => v && (
+          <div key={k}>
+            <div style={{fontSize:9, letterSpacing:1.5, color:"#3a3a3a", marginBottom:4}}>{k}</div>
+            <div style={{fontSize:13, color:"#bbb", lineHeight:1.7}}>{v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [openWeek, setOpenWeek]         = useState(null);
+  const [openDay, setOpenDay]           = useState(null);
+  const [phaseFilter, setPhaseFilter]   = useState(null);
+  const [showStrength, setShowStrength] = useState(null);
+
+  const visible = phaseFilter ? plan.filter(w => w.phase === phaseFilter) : plan;
+
+  return (
+    <div className="app-shell">
+      <div style={{minHeight:"100vh", background:"#0a0a0a", color:"#e5e5e5", fontFamily:"'Courier New', monospace", padding:"24px 16px", maxWidth:860, margin:"0 auto"}}>
+
+        <div style={{marginBottom:36}}>
+          <div style={{fontSize:10, letterSpacing:6, color:"#333", marginBottom:8}}>17-WEEK TRAINING PLAN</div>
+          <h1 style={{fontSize:"clamp(28px,7vw,50px)", fontWeight:900, letterSpacing:-2, margin:0, lineHeight:1, fontFamily:"'Georgia', serif"}}>
+            HALF MARATHON
+          </h1>
+          <div style={{display:"flex", gap:20, marginTop:14, flexWrap:"wrap"}}>
+            {[["TARGET","Sub-2:00"],["RACE PACE","5:41 / km"],["EASY PACE","6:45–7:15 / km"],["RACE DATE","Late August 2026"]].map(([k,v]) => (
+              <div key={k}>
+                <div style={{fontSize:9, letterSpacing:3, color:"#3a3a3a"}}>{k}</div>
+                <div style={{fontSize:14, fontWeight:700, color:"#e5e5e5"}}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:14, padding:"10px 12px", background:"#0d0d0d", border:"1px solid #1e1e1e", fontSize:11, color:"#444", lineHeight:1.8}}>
+            MON easy &nbsp;·&nbsp; TUE easy + Str A &nbsp;·&nbsp; WED off &nbsp;·&nbsp; THU quality &nbsp;·&nbsp; FRI cycling + Str B &nbsp;·&nbsp; SAT long &nbsp;·&nbsp; SUN off
+          </div>
+        </div>
+
+        <div style={{display:"grid", gridTemplateColumns:"repeat(2, 1fr)", gap:6, marginBottom:24}}>
+          {phases.map(p => (
+            <div key={p.id} onClick={() => setPhaseFilter(phaseFilter===p.id ? null : p.id)}
+              style={{padding:"12px", border:`1px solid ${phaseFilter===p.id ? phaseColors[p.id] : "#1e1e1e"}`,
+                background:phaseFilter===p.id ? phaseColors[p.id]+"11" : "#0c0c0c", cursor:"pointer"}}>
+              <div style={{fontSize:9, letterSpacing:3, color:phaseColors[p.id]}}>{p.name} — WK {p.weeks}</div>
+              <div style={{fontSize:11, color:"#555", marginTop:4, lineHeight:1.5}}>{p.desc}</div>
+            </div>
+          ))}
+        </div>
+        {phaseFilter && (
+          <div style={{fontSize:11, color:"#444", marginBottom:12, letterSpacing:1}}>
+            Showing {phaseNames[phaseFilter]} only —{" "}
+            <span onClick={() => setPhaseFilter(null)} style={{color:"#777", cursor:"pointer", textDecoration:"underline"}}>show all</span>
+          </div>
+        )}
+
+        <div style={{display:"flex", flexDirection:"column", gap:3, marginBottom:40}}>
+          {visible.map(w => {
+            const pc = phaseColors[w.phase];
+            const isOpen = openWeek === w.week;
+            return (
+              <div key={w.week} style={{border:`1px solid ${isOpen ? pc+"44" : "#161616"}`, background:"#0c0c0c"}}>
+                <div onClick={() => { setOpenWeek(isOpen ? null : w.week); setOpenDay(null); }}
+                  style={{display:"flex", alignItems:"center", gap:10, padding:"13px 14px", cursor:"pointer"}}>
+                  <div style={{fontSize:9, letterSpacing:3, color:pc, minWidth:76}}>{phaseNames[w.phase]} W{w.week}</div>
+                  {w.cutback && <div style={{fontSize:8, letterSpacing:2, color:"#444", border:"1px solid #222", padding:"1px 5px", flexShrink:0}}>CUT</div>}
+                  <div style={{flex:1, display:"flex", gap:2}}>
+                    {days.map(d => <div key={d} style={{flex:1, height:5, background:typeStyles[w[d].type].border, opacity:w[d].type==="off"?0.08:0.6}} />)}
+                  </div>
+                  <div style={{fontSize:11, color:"#3a3a3a", minWidth:44, textAlign:"right"}}>{w.totalKm} km</div>
+                  <div style={{fontSize:10, color:"#3a3a3a", marginLeft:2}}>{isOpen ? "▲" : "▼"}</div>
+                </div>
+
+                {isOpen && (
+                  <div style={{borderTop:"1px solid #141414"}}>
+                    {days.map((d,i) => {
+                      const session = w[d];
+                      const s = typeStyles[session.type];
+                      const isOff = session.type === "off";
+                      const key = `${w.week}-${d}`;
+                      const isDayOpen = openDay === key;
+                      const coachData = getCoaching(session.type, session.desc);
+                      const showStrengthA = session.desc.toLowerCase().includes("strength a");
+
+                      return (
+                        <div key={d} style={{borderTop:"1px solid #111"}}>
+                          <div onClick={() => !isOff && setOpenDay(isDayOpen ? null : key)}
+                            style={{display:"flex", gap:12, padding:"13px 14px", cursor:isOff?"default":"pointer",
+                              background:isDayOpen?"#101010":"transparent"}}>
+                            <div style={{fontSize:9, letterSpacing:2, color:"#333", minWidth:28, paddingTop:1}}>{dayLabels[i]}</div>
+                            <div style={{width:2, background:s.border, opacity:isOff?0.15:0.75, flexShrink:0, borderRadius:1}} />
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:10, color:s.labelColor, letterSpacing:2, marginBottom:3}}>{s.label}</div>
+                              <div style={{fontSize:13, color:isOff?"#2a2a2a":"#ccc", lineHeight:1.5}}>{session.desc}</div>
+                              {!isOff && <div style={{fontSize:10, color:"#333", marginTop:5, letterSpacing:1}}>{isDayOpen?"▲ hide notes":"▼ coaching notes"}</div>}
+                            </div>
+                          </div>
+
+                          {isDayOpen && coachData && (
+                            <div style={{padding:"0 14px 16px 14px"}}>
+                              <CoachingPanel data={coachData} />
+                              {showStrengthA && <div style={{marginTop:8}}><CoachingPanel data={coaching.strengthA} /></div>}
+                              {session.type === "cross" && <div style={{marginTop:8}}><CoachingPanel data={coaching.strengthB} /></div>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{borderTop:"1px solid #1a1a1a", paddingTop:24, marginBottom:8}}>
+          <div style={{fontSize:10, letterSpacing:4, color:"#333", marginBottom:14}}>STRENGTH REFERENCE</div>
+          <div style={{display:"flex", gap:8, marginBottom:16}}>
+            {["A","B"].map(l => (
+              <button key={l} onClick={() => setShowStrength(showStrength===l?null:l)}
+                style={{padding:"10px 20px", border:`1px solid ${showStrength===l?"#60a5fa":"#222"}`,
+                  background:showStrength===l?"#60a5fa11":"transparent",
+                  color:showStrength===l?"#60a5fa":"#555",
+                  fontSize:10, letterSpacing:3, cursor:"pointer", fontFamily:"'Courier New', monospace"}}>
+                SESSION {l}
+              </button>
+            ))}
+          </div>
+          {showStrength==="A" && <CoachingPanel data={coaching.strengthA} />}
+          {showStrength==="B" && <CoachingPanel data={coaching.strengthB} />}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
